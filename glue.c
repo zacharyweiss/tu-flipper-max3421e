@@ -1,11 +1,18 @@
 #include <furi.h>
 #include <furi_hal.h>
+#include <furi_hal_gpio.h>
+#include "tusb_config.h"
+
+#define P_MISO &gpio_ext_pa6
+#define P_MOSI &gpio_ext_pa7
+#define P_CLK &gpio_ext_pb3
+#define P_CS &gpio_ext_pa4
+#define P_INT &gpio_ext_pc3
+#define SPI_TIMEOUT 1000
 
 #if CFG_TUH_ENABLED && CFG_TUH_MAX3421
 static void max3421_init(void);
 #endif
-
-#define SPI_TIMEOUT 1000
 
 const LL_SPI_InitTypeDef spi_preset_custom = {
     //hspi5.Instance = SPI5;
@@ -134,10 +141,10 @@ static void spi_bus_handle_custom_event_callback(
 FuriHalSpiBusHandle spi_bus_handle_custom = {
     .bus = &furi_hal_spi_bus_r,
     .callback = spi_bus_handle_custom_event_callback,
-    .miso = &gpio_ext_pa6,
-    .mosi = &gpio_ext_pa7,
-    .sck = &gpio_ext_pb3,
-    .cs = &gpio_ext_pa4,
+    .miso = P_MISO,
+    .mosi = P_MOSI,
+    .sck = P_CLK,
+    .cs = P_CS,
 };
 
 #define SPI_HANDLE &spi_bus_handle_custom
@@ -155,27 +162,41 @@ void board_init(void) {
 //--------------------------------------------------------------------+
 #if CFG_TUH_ENABLED && defined(CFG_TUH_MAX3421) && CFG_TUH_MAX3421
 
-void max3421_int_handler(uint gpio, uint32_t event_mask) {
-    // ??
-    if(!(gpio == MAX3421_INTR_PIN && event_mask & GPIO_IRQ_EDGE_FALL)) return;
+void max3421_int_handler(void) {
+    // if(!(gpio == MAX3421_INTR_PIN && event_mask & GPIO_IRQ_EDGE_FALL)) return;
     tuh_int_handler(BOARD_TUH_RHPORT, true);
 }
 
 static void max3421_init(void) {
+    // SPI init
+    // (incl CS pin)
     furi_hal_spi_bus_handle_init(SPI_HANDLE);
 
-    // CS pin
-
     // Interrupt pin
-
-    // SPI init
+    // GPIO pin (C3) is pull-up to VCC.  Add switch to ground for change in value.
+    // I use 220ohm resistor from switch to C3 (but optional if you are SURE
+    // the pin is in input/interrupt mode).
+    //
+    // GpioModeInterruptRiseFall means callback invoked when going from VCC (from our
+    // pull-up resistor) to GND.
+    //
+    // NOTE: You can use GpioModeInterruptRise for invoking on a GND->VCC and
+    // GpioModeInterruptRiseFall for invoking on both transitions.
+    furi_hal_gpio_init(P_INT, GpioModeInterruptFall, GpioPullUp, GpioSpeedVeryHigh);
 }
 
 //// API to enable/disable MAX3421 INTR pin interrupt
 void tuh_max3421_int_api(uint8_t rhport, bool enabled) {
     (void)rhport;
-    // ??
-    irq_set_enabled(IO_IRQ_BANK0, enabled);
+
+    if(enabled) {
+        // NOTE: "add_int_callback" does "enable_int_callback" automatically.
+        // For the 3rd parameter, you can pass any object that you want to be passed
+        // to your callback method.
+        furi_hal_gpio_add_int_callback(P_INT, max3421_int_handler, NULL);
+    } else {
+        furi_hal_gpio_remove_int_callback(P_INT);
+    }
 }
 
 // API to control MAX3421 SPI CS
