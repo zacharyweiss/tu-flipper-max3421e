@@ -68,16 +68,13 @@ extern "C" {
 
 // Enable Host stack
 #define CFG_TUH_ENABLED 1
-
-#if CFG_TUSB_MCU == OPT_MCU_RP2040
-// #define CFG_TUH_RPI_PIO_USB   1 // use pio-usb as host controller
-// #define CFG_TUH_MAX3421       1 // use max3421 as host controller
+// use max3421 as host controller
+#define CFG_TUH_MAX3421 1
 
 // host roothub port is 1 if using either pio-usb or max3421
 #if(defined(CFG_TUH_RPI_PIO_USB) && CFG_TUH_RPI_PIO_USB) || \
     (defined(CFG_TUH_MAX3421) && CFG_TUH_MAX3421)
 #define BOARD_TUH_RHPORT 1
-#endif
 #endif
 
 // Default is max speed that hardware controller could support with on-chip PHY

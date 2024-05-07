@@ -48,7 +48,7 @@ git submodule update --init --recursive
                 # replicates "family" / "board" -level code, but impl in furi
                 "glue.c",
             ],
-            cdefines=["CFG_TUH_MAX3421", "CFG_TUH_ENABLED", "MAX3421_HOST"],
+            cdefines=[],
             # cflags=[],
             cincludes=[
                 "lib/tu-flipper-max3421e",
