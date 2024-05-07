@@ -1,6 +1,15 @@
 Attempting to get the max3421e working on the F0, using tinyusb and `furi`.
 
-> `application.fam`
+From application root:
+```
+mkdir lib
+cd lib
+git submodule add https://github.com/zacharyweiss/tu-flipper-max3421e
+cd ..
+git submodule update --init --recursive
+```
+
+`application.fam`
 ```
 fap_private_libs=[
     Lib(
