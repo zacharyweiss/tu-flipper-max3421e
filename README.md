@@ -46,7 +46,7 @@ fap_private_libs=[
             # adds max3421e as host controller
             "tinyusb/src/portable/analog/max3421/hcd_max3421.c",
             # replicates "family" / "board" -level code, but impl in furi
-            "family.c",
+            "glue.c",
         ],
         cdefines=[
             "CFG_TUH_MAX3421", 
