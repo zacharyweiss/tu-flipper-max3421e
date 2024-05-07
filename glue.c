@@ -2,6 +2,7 @@
 #include <furi_hal.h>
 #include <furi_hal_gpio.h>
 #include "tusb_config.h"
+#include "tusb.h"
 
 #define P_MISO &gpio_ext_pa6
 #define P_MOSI &gpio_ext_pa7
