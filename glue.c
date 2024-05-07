@@ -162,7 +162,8 @@ void board_init(void) {
 //--------------------------------------------------------------------+
 #if CFG_TUH_ENABLED && defined(CFG_TUH_MAX3421) && CFG_TUH_MAX3421
 
-void max3421_int_handler(void) {
+void max3421_int_handler(void* ctx) {
+    UNUSED(ctx);
     // if(!(gpio == MAX3421_INTR_PIN && event_mask & GPIO_IRQ_EDGE_FALL)) return;
     tuh_int_handler(BOARD_TUH_RHPORT, true);
 }
@@ -225,17 +226,13 @@ bool tuh_max3421_spi_xfer_api(
         return false;
     }
 
-    int ret;
-
     if(tx_buf == NULL) {
-        ret = furi_hal_spi_bus_rx(SPI_HANDLE, rx_buf, xfer_bytes, SPI_TIMEOUT);
+        return furi_hal_spi_bus_rx(SPI_HANDLE, rx_buf, xfer_bytes, SPI_TIMEOUT);
     } else if(rx_buf == NULL) {
-        ret = furi_hal_spi_bus_tx(SPI_HANDLE, tx_buf, xfer_bytes, SPI_TIMEOUT);
+        return furi_hal_spi_bus_tx(SPI_HANDLE, tx_buf, xfer_bytes, SPI_TIMEOUT);
     } else {
-        ret = furi_hal_spi_bus_trx(SPI_HANDLE, tx_buf, rx_buf, xfer_bytes, SPI_TIMEOUT);
+        return furi_hal_spi_bus_trx(SPI_HANDLE, tx_buf, rx_buf, xfer_bytes, SPI_TIMEOUT);
     }
-
-    return ret == (int)xfer_bytes;
 }
 
 #endif
