@@ -3,13 +3,7 @@
 #include <furi_hal_gpio.h>
 #include "tusb_config.h"
 #include "tusb.h"
-
-#define P_MISO &gpio_ext_pa6
-#define P_MOSI &gpio_ext_pa7
-#define P_CLK &gpio_ext_pb3
-#define P_CS &gpio_ext_pa4
-#define P_INT &gpio_ext_pc3
-#define SPI_TIMEOUT 1000
+#include "glue.h"
 
 #if CFG_TUH_ENABLED && CFG_TUH_MAX3421
 static void max3421_init(void);
@@ -150,12 +144,18 @@ FuriHalSpiBusHandle spi_bus_handle_custom = {
 
 #define SPI_HANDLE &spi_bus_handle_custom
 
-void board_init(void) {
+void board_init() {
 #if CFG_TUH_ENABLED
 #if CFG_TUH_MAX3421
     max3421_init();
 #endif
 #endif
+}
+
+void board_deinit() {
+    furi_hal_spi_bus_handle_deinit(SPI_HANDLE);
+    furi_hal_gpio_remove_int_callback(P_INT);
+    furi_hal_gpio_init(P_INT, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
 }
 
 //--------------------------------------------------------------------+
