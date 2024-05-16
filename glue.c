@@ -9,6 +9,11 @@
 static void max3421_init(void);
 #endif
 
+usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
+    *driver_count = 0;
+    return NULL;
+}
+
 const LL_SPI_InitTypeDef spi_preset_custom = {
     //hspi5.Instance = SPI5;
     //hspi5.Init.Mode = SPI_MODE_MASTER;
@@ -22,7 +27,7 @@ const LL_SPI_InitTypeDef spi_preset_custom = {
     //hspi5.Init.CLKPhase = SPI_PHASE_1EDGE;
     .ClockPhase = LL_SPI_PHASE_1EDGE,
     //hspi5.Init.NSS = SPI_NSS_HARD_OUTPUT;
-    .NSS = LL_SPI_NSS_HARD_OUTPUT,
+    .NSS = LL_SPI_NSS_SOFT, //LL_SPI_NSS_HARD_OUTPUT,
     //hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;
     .BaudRate = LL_SPI_BAUDRATEPRESCALER_DIV128,
     //hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -81,56 +86,10 @@ inline static void furi_hal_spi_bus_external_handle_event_callback(
     }
 }
 
-inline static void furi_hal_spi_bus_r_handle_event_callback(
-    FuriHalSpiBusHandle* handle,
-    FuriHalSpiBusHandleEvent event,
-    const LL_SPI_InitTypeDef* preset) {
-    if(event == FuriHalSpiBusHandleEventInit) {
-        furi_hal_gpio_write(handle->cs, true);
-        furi_hal_gpio_init(handle->cs, GpioModeOutputPushPull, GpioPullNo, GpioSpeedVeryHigh);
-    } else if(event == FuriHalSpiBusHandleEventDeinit) {
-        furi_hal_gpio_write(handle->cs, true);
-        furi_hal_gpio_init(handle->cs, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
-    } else if(event == FuriHalSpiBusHandleEventActivate) {
-        LL_SPI_Init(handle->bus->spi, (LL_SPI_InitTypeDef*)preset);
-        LL_SPI_SetRxFIFOThreshold(handle->bus->spi, LL_SPI_RX_FIFO_TH_QUARTER);
-        LL_SPI_Enable(handle->bus->spi);
-
-        furi_hal_gpio_init_ex(
-            handle->miso,
-            GpioModeAltFunctionPushPull,
-            GpioPullNo,
-            GpioSpeedVeryHigh,
-            GpioAltFn5SPI1);
-        furi_hal_gpio_init_ex(
-            handle->mosi,
-            GpioModeAltFunctionPushPull,
-            GpioPullNo,
-            GpioSpeedVeryHigh,
-            GpioAltFn5SPI1);
-        furi_hal_gpio_init_ex(
-            handle->sck,
-            GpioModeAltFunctionPushPull,
-            GpioPullNo,
-            GpioSpeedVeryHigh,
-            GpioAltFn5SPI1);
-
-        furi_hal_gpio_write(handle->cs, false);
-    } else if(event == FuriHalSpiBusHandleEventDeactivate) {
-        furi_hal_gpio_write(handle->cs, true);
-
-        furi_hal_gpio_init(handle->miso, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
-        furi_hal_gpio_init(handle->mosi, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
-        furi_hal_gpio_init(handle->sck, GpioModeAnalog, GpioPullNo, GpioSpeedLow);
-
-        LL_SPI_Disable(handle->bus->spi);
-    }
-}
-
 static void spi_bus_handle_custom_event_callback(
     FuriHalSpiBusHandle* handle,
     FuriHalSpiBusHandleEvent event) {
-    furi_hal_spi_bus_r_handle_event_callback(handle, event, &spi_preset_custom);
+    furi_hal_spi_bus_external_handle_event_callback(handle, event, &spi_preset_custom);
 }
 
 FuriHalSpiBusHandle spi_bus_handle_custom = {
@@ -142,7 +101,7 @@ FuriHalSpiBusHandle spi_bus_handle_custom = {
     .cs = P_CS,
 };
 
-#define SPI_HANDLE &spi_bus_handle_custom
+#define SPI_HANDLE &furi_hal_spi_bus_handle_external // &spi_bus_handle_custom
 
 void board_init() {
 #if CFG_TUH_ENABLED
@@ -185,6 +144,11 @@ static void max3421_init(void) {
     // NOTE: You can use GpioModeInterruptRise for invoking on a GND->VCC and
     // GpioModeInterruptRiseFall for invoking on both transitions.
     furi_hal_gpio_init(P_INT, GpioModeInterruptFall, GpioPullUp, GpioSpeedVeryHigh);
+
+    // NOTE: "add_int_callback" does "enable_int_callback" automatically.
+    // For the 3rd parameter, you can pass any object that you want to be passed
+    // to your callback method.
+    furi_hal_gpio_add_int_callback(P_INT, max3421_int_handler, NULL);
 }
 
 //// API to enable/disable MAX3421 INTR pin interrupt
@@ -192,12 +156,9 @@ void tuh_max3421_int_api(uint8_t rhport, bool enabled) {
     (void)rhport;
 
     if(enabled) {
-        // NOTE: "add_int_callback" does "enable_int_callback" automatically.
-        // For the 3rd parameter, you can pass any object that you want to be passed
-        // to your callback method.
-        furi_hal_gpio_add_int_callback(P_INT, max3421_int_handler, NULL);
+        furi_hal_gpio_enable_int_callback(P_INT);
     } else {
-        furi_hal_gpio_remove_int_callback(P_INT);
+        furi_hal_gpio_disable_int_callback(P_INT);
     }
 }
 
@@ -205,6 +166,8 @@ void tuh_max3421_int_api(uint8_t rhport, bool enabled) {
 void tuh_max3421_spi_cs_api(uint8_t rhport, bool active) {
     (void)rhport;
 
+    // should I be acquiring/releasing here?
+    // or manually writing to CS?
     if(active) {
         furi_hal_spi_acquire(SPI_HANDLE);
     } else {
@@ -220,8 +183,6 @@ bool tuh_max3421_spi_xfer_api(
     uint8_t* rx_buf,
     size_t xfer_bytes) {
     (void)rhport;
-    // Does CS api get called surrounding the XFER?
-    // Or do I manually need to add acquire/release here too?
 
     if(tx_buf == NULL && rx_buf == NULL) {
         return false;
