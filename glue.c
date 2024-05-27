@@ -3,13 +3,14 @@
 #include <furi_hal_gpio.h>
 #include "tusb_config.h"
 #include "tusb.h"
+#include "host/usbh_pvt.h"
 #include "glue.h"
 
 #if CFG_TUH_ENABLED && CFG_TUH_MAX3421
 static void max3421_init(void);
 #endif
 
-usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
+const usbh_class_driver_t* usbh_app_driver_get_cb(uint8_t* driver_count) {
     *driver_count = 0;
     return NULL;
 }
