@@ -46,20 +46,8 @@ static void max3421_init(void) {
     furi_hal_spi_bus_handle_init(SPI_HANDLE);
 
     // Interrupt pin
-    // GPIO pin (C3) is pull-up to VCC.  Add switch to ground for change in value.
-    // I use 220ohm resistor from switch to C3 (but optional if you are SURE
-    // the pin is in input/interrupt mode).
-    //
-    // GpioModeInterruptRiseFall means callback invoked when going from VCC (from our
-    // pull-up resistor) to GND.
-    //
-    // NOTE: You can use GpioModeInterruptRise for invoking on a GND->VCC and
-    // GpioModeInterruptRiseFall for invoking on both transitions.
     furi_hal_gpio_init(P_INT, GpioModeInterruptFall, GpioPullUp, GpioSpeedVeryHigh);
-
-    // NOTE: "add_int_callback" does "enable_int_callback" automatically.
-    // For the 3rd parameter, you can pass any object that you want to be passed
-    // to your callback method.
+    // "add_int_callback" does "enable_int_callback" automatically.
     furi_hal_gpio_add_int_callback(P_INT, max3421_int_handler, NULL);
 }
 
