@@ -1,8 +1,5 @@
 
-#define P_MISO &gpio_ext_pa6
-#define P_MOSI &gpio_ext_pa7
-#define P_CLK &gpio_ext_pb3
-#define P_CS &gpio_ext_pa4
+#define SPI_HANDLE &furi_hal_spi_bus_handle_external
 #define P_INT &gpio_ext_pb2
 #define SPI_TIMEOUT 1000
 
